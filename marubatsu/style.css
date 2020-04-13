@@ -1,0 +1,43 @@
+
+.tile-container {
+  display: grid;
+  grid-template: 100px 100px 100px / 100px 100px 100px;
+  grid-row-gap: 4px;
+  grid-column-gap: 4px;
+}
+
+#00 {
+  grid-area: 1/1;
+}
+#01 {
+  grid-area: 1/2;
+}
+#02 {
+  grid-area: 1/3;
+}
+#10 {
+  grid-area: 2/1;
+}
+#11 {
+  grid-area: 2/2;
+}
+#12 {
+  grid-area: 2/3;
+}
+#20 {
+  grid-area: 3/1;
+}
+#21 {
+  grid-area: 3/2;
+}
+#22 {
+  grid-area: 3/3;
+}
+
+.cell {
+  text-align: center;
+  font-size: 60px;
+  font-weight: bold;
+  border: solid #666 5px;
+  background-color: #dcdcdc;
+}
