@@ -18,6 +18,13 @@ function onClick(row, column)
   if (winner != 0) return;
   
   putRandom();
+  setTimeout(timeOut, 2000);
+}
+
+function timeOut()
+{
+  winner = 5;
+  refresh();
 }
 
 function putRandom()
@@ -96,6 +103,8 @@ function refresh()
     messageObj.innerText = '○の勝ちー';
   else if (winner == 2)
     messageObj.innerText = '×の勝ちー';
+  else if (winner == 5)
+    messageObj.innerText = '2秒経ったので△の勝ちー';
 }
 
 function init(N)
