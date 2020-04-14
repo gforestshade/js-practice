@@ -3,6 +3,7 @@ var messageObj;
 var cellObjs;
 var cells;
 var gameOver;
+var playerTimeOutId;
 
 
 function onClick(row, column)
@@ -18,13 +19,20 @@ function onClick(row, column)
   if (winner != 0) return;
   
   putRandom();
-  setTimeout(timeOut, 2000);
+  
+  if (playerTimeOutId > 0)
+    clearTimeout(playerTimeOutId);
+
+  playerTimeOutId = setTimeout(timeOut, 2000);
 }
 
 function timeOut()
 {
-  winner = 5;
-  refresh();
+  if (winner == 0)
+  {
+    winner = 5;
+    refresh();
+  }
 }
 
 function putRandom()
@@ -127,6 +135,7 @@ function init(N)
   }
 
   messageObj = document.getElementById('message');
+  playerTimeOutId = -1;
   winner = 0;
 }
 
