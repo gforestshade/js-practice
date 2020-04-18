@@ -1,10 +1,57 @@
 ﻿'use strict';
 
-var cellObjs;
-var playerTimeOutId;
-var playerTimeOutSec;
-var messageObj;
-var board;
+///////////////// gloval functions /////////////////////
+function randomChoice(a)
+{
+  const rnd = Math.floor(Math.random() * a.length);
+  return a[rnd];
+}
+
+function dfs(board, me, turnPlayer, leftDepth)
+{
+  const winner = board.judge();
+  if (winner == me)
+    return {score: 1000};
+  else if (winner > 0 && winner < 10)
+    return {score: -1000};
+  else if (leftDepth <= 0)
+    return {score: 0};
+
+
+  let m = {};
+  if (turnPlayer == me)
+    m.score = -Infinity;
+  else
+    m.score = Infinity;
+  
+  const vList = board.getVacantList();
+  const nextPlayer = board.nextPlayer(turnPlayer);
+  for (const v of vList)
+  {
+    let newBoard = board.clone();
+    newBoard.cells[v[0]][v[1]] = turnPlayer;
+    newBoard.alreadyPut++;
+    const mm = dfs(newBoard, me, nextPlayer, leftDepth - 1);
+
+    if ((turnPlayer == me && mm.score > m.score) || (turnPlayer != me && mm.score < m.score))
+    {
+      m.score = mm.score;
+      m.move = [v];
+    }
+    else if (mm.score == m.score)
+    {
+      m.move.push(v);
+    }
+  }
+  return m;
+}
+
+function asyncTimeOut(tick)
+{
+  return new Promise(resolve => setTimeout(resolve, tick));
+}
+
+
 
 class Board
 {
@@ -67,8 +114,6 @@ class Board
     this.cells[cell[0]][cell[1]] = p;
 
     this.alreadyPut++;
-    this.winner = this.judge();
-    refresh(this);
   }
   
   getVacantList()
@@ -98,15 +143,15 @@ class Board
     {
       return [1,1];
     }
-    else if (this.alreadyPut == 1)
+    else if (this.nTiles == 3 && this.alreadyPut == 1)
     {
       return randomChoice([[0,0],[0,2],[2,0],[2,2]]);
     }
     else
     {
       const depth = this.nTiles * this.nTiles - this.alreadyPut;
-      const {te} = dfs(this, p, p, depth);
-      return randomChoice(te);
+      const {move} = dfs(this, p, p, depth);
+      return randomChoice(move);
     }
   }
 
@@ -153,125 +198,115 @@ class Board
 }
 
 
-///////////////// gloval functions /////////////////////
-function randomChoice(a)
+class StatusMessage
 {
-  const rnd = Math.floor(Math.random() * a.length);
-  return a[rnd];
-}
-
-
-function dfs(board, me, turnPlayer, leftDepth)
-{
-  const winner = board.judge();
-  if (winner == me)
-    return {score: 1000};
-  else if (winner > 0 && winner < 10)
-    return {score: -1000};
-  else if (leftDepth <= 0)
-    return {score: 0};
-
-
-  let m = {};
-  if (turnPlayer == me)
-    m.score = -Infinity;
-  else
-    m.score = Infinity;
-  
-  let vList = board.getVacantList();
-  let nextPlayer = board.nextPlayer(turnPlayer);
-  for (const v of vList)
+  constructor(sec)
   {
-    let newBoard = board.clone();
-    newBoard.cells[v[0]][v[1]] = turnPlayer;
-    newBoard.alreadyPut++;
-    const mm = dfs(newBoard, me, nextPlayer, leftDepth - 1);
-
-    if ((turnPlayer == me && mm.score > m.score) || (turnPlayer != me && mm.score < m.score))
-    {
-      m.score = mm.score;
-      m.te = [v];
-    }
-    else if (mm.score == m.score)
-    {
-      m.te.push(v);
-    }
+    this.message = {
+      1: '○の勝ちー',
+      2: '×の勝ちー',
+      11: `${sec}秒経ったので△の勝ちー`,
+      12: '漁夫の利を得た△の勝ちー',
+    };
   }
-  return m;
-}
 
-function onClick(row, column)
-{
-  if (!board.tryPut(row, column, 1)) return;
-  board.winner = board.judge();
-  refresh(board);
-
-  if (board.winner != 0) return;
-  
-  board.AIPut(board.putHard, 2);
-  
-  if (playerTimeOutId > 0)
-    clearTimeout(playerTimeOutId);
-
-  playerTimeOutId = setTimeout(timeOut, playerTimeOutSec * 1000);
-}
-
-function timeOut()
-{
-  if (board.winner == 0)
+  getMessage(i)
   {
-    board.winner = 11;
-    refresh(board);
+    return this.message[i];
   }
 }
 
-function refresh(board)
+
+class Game
 {
-  let N = 3;
-  for (let i = 0; i < N; i++)
+  refresh()
   {
-    for (let j = 0; j < N; j++)
+    const N = this.board.nTiles;
+    const texts = ['', '○', '×'];
+    for (let i = 0; i < N; i++)
     {
-      if (board.cells[i][j] == 0)
-        cellObjs[i][j].innerText = '';
-      else if (board.cells[i][j] == 1)
-        cellObjs[i][j].innerText = '○';
-      else if (board.cells[i][j] == 2)
-        cellObjs[i][j].innerText = '×';
+      for (let j = 0; j < N; j++)
+      {
+        const c = this.board.cells[i][j];
+        this.cellObjs[i][j].innerText = texts[c];
+      }
     }
   }
 
-  if (board.winner == 1)
-    messageObj.innerText = '○の勝ちー';
-  else if (board.winner == 2)
-    messageObj.innerText = '×の勝ちー';
-  else if (board.winner == 11)
-    messageObj.innerText = `${playerTimeOutSec}秒経ったので△の勝ちー`;
-  else if (board.winner == 12)
-    messageObj.innerText = '漁夫の利を得た△の勝ちー';
-  // console.log(board.alreadyPut + "個置かれた");
-}
-
-function init(nTiles, nPlayer, sec)
-{
-  board = new Board(nTiles, nPlayer);
-  cellObjs = new Array(nTiles);
-  for (let i = 0; i < nTiles; i++)
+  async waitForClick(tick, timeOut)
   {
-    cellObjs[i] = new Array(nTiles);
-    for (let j = 0; j < nTiles; j++)
+    const nTick = timeOut * 1000 / tick;
+    for (let i = 0; i < nTick; i++)
     {
-      let cellId = `${i}${j}`;
-      cellObjs[i][j] = document.getElementById(cellId);
-      cellObjs[i][j].onclick = (e) => onClick(i, j);
+      if (this.clickQueue.length > 0)
+      {
+        const c = this.clickQueue[0];
+        this.clickQueue = [];
+        return c;
+      }
+      await asyncTimeOut(tick);
+    }
+    return [-1,-1];
+  }
+
+  async mainGameLoop()
+  {
+    let board = this.board;
+    while (true)
+    {
+      const [row, column] = await this.waitForClick(30, this.timeOutSec);
+      
+      if ((row < 0 || column < 0) &&
+          board.alreadyPut > 0 &&
+          board.winner == 0)
+      {
+        board.winner = 11;
+        this.refresh();
+        break;
+      }
+      
+      if (!board.tryPut(row, column, 1)) continue;
+      board.winner = board.judge();
+      this.refresh();
+      if (board.winner != 0) break;
+      
+      board.AIPut(board.putHard, 2);
+      board.winner = board.judge();
+      this.refresh();
+      if (board.winner != 0) break;
     }
   }
 
-  messageObj = document.getElementById('message');
-  playerTimeOutId = -1;
-  playerTimeOutSec = sec;
+  constructor(nTiles, nPlayer, timeOutSec)
+  {
+    this.board = new Board(nTiles, nPlayer);
+    this.cellObjs = new Array(nTiles);
+    this.clickQueue = [];
+
+    for (let i = 0; i < nTiles; i++)
+    {
+      this.cellObjs[i] = new Array(nTiles);
+      for (let j = 0; j < nTiles; j++)
+      {
+        let cellId = `${i}${j}`;
+        this.cellObjs[i][j] = document.getElementById(cellId);
+        this.cellObjs[i][j].onclick = e => this.clickQueue.push([i,j]);
+      }
+    }
+
+    this.messageObj = document.getElementById('message');
+    this.messageTexts = new StatusMessage(timeOutSec);
+    this.timeOutSec = timeOutSec;
+  }
+
+  async go()
+  {
+    await this.mainGameLoop();
+
+    const message = this.messageTexts.getMessage(this.board.winner);
+    if (message) this.messageObj.innerText = message;
+  }
 }
 
-
-
-init(3, 2, 5.0);
+let game = new Game(3, 2, 5.0);
+game.go();
