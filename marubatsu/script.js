@@ -256,13 +256,18 @@ class Game
     {
       const [row, column] = await this.waitForClick(30, this.timeOutSec);
       
-      if ((row < 0 || column < 0) &&
-          board.alreadyPut > 0 &&
-          board.winner == 0)
+      if (row < 0 || column < 0)
       {
-        board.winner = 11;
-        this.refresh();
-        break;
+        if (board.alreadyPut > 0 && board.winner == 0)
+        {
+          board.winner = 11;
+          this.refresh();
+          break;
+        }
+        else
+        {
+          continue;
+        }
       }
       
       if (!board.tryPut(row, column, 1)) continue;
